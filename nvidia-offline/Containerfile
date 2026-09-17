@@ -1,0 +1,11 @@
+# Set BASE_IMAGE to the saved image name in your bundle's base-image.txt.
+# The transfer build.sh provides the extracted offline/ build context.
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# Extract nvidia-offline.tar.gz into ./offline first. A bind mount keeps RPMs
+# out of the resulting image layers. Podman supports this Containerfile syntax.
+RUN --mount=type=bind,source=offline/nvidia-offline,target=/tmp/nvidia-offline \
+    NVIDIA_OFFLINE_IMAGE_BUILD=1 bash /tmp/nvidia-offline/install.sh --bootc
+
+RUN bootc container lint

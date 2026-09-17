@@ -1,0 +1,19 @@
+[Unit]
+Description=Environment baseline container
+Wants=network-online.target
+After=network-online.target cloud-final.service
+ConditionPathExists=/etc/containers/registry-auth.json
+
+[Container]
+Image=@BASELINE_IMAGE@
+ContainerName=baseline
+PodmanArgs=--authfile=/etc/containers/registry-auth.json
+Pull=missing
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

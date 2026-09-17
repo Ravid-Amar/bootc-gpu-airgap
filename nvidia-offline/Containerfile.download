@@ -1,0 +1,9 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+COPY common.sh setup.sh download.sh collect-keys.py toolkit-repo.py install.sh /offline-tools/
+COPY config.sh /offline-tools/config.sh
+COPY base-packages.txt /offline-tools/base-packages.txt
+# Capture the unmodified image inventory before installing download tools.
+RUN bash /offline-tools/setup.sh
+ARG ACTION=prepare
+RUN bash /offline-tools/download.sh ${ACTION}

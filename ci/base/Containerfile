@@ -1,0 +1,21 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+
+# The verified installer checks the original RPM inventory. Keep this first.
+RUN --mount=type=bind,source=nvidia-offline,target=/tmp/nvidia-offline \
+    NVIDIA_OFFLINE_IMAGE_BUILD=1 bash /tmp/nvidia-offline/install.sh --bootc
+
+# Replace inherited public repositories with the site's offline mirror settings.
+RUN rm -f /etc/yum.repos.d/*.repo
+
+# Add environment CA certificates, local mirror .repo files, and OS settings
+# under base/rootfs using their absolute filesystem layout. No credentials.
+COPY base/rootfs/ /
+
+# Add your environment build steps here. Additional packages must already be
+# included in the offline bundle. Do not upgrade the kernel independently.
+RUN rpm -q cloud-init qemu-guest-agent podman nvidia-container-toolkit && \
+    update-ca-trust && \
+    systemctl enable cloud-init-local.service cloud-init.service \
+      cloud-config.service cloud-final.service qemu-guest-agent.service sshd.service && \
+    bootc container lint

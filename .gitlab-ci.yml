@@ -1,0 +1,68 @@
+stages: [base, golden, deploy]
+
+default:
+  tags: [bootc-shell]
+  interruptible: false
+
+workflow:
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+
+variables:
+  # Paths are on each shell runner, not inside an executor container.
+  OFFLINE_DIR: /srv/bootc/offline
+  PODMAN_USE_SUDO: "1"
+  BIB_IMAGE: localhost/bootc-image-builder:offline
+  # Internal RPM mirror access; the runner does not need internet access.
+  BIB_NETWORK: host
+  BIB_CONFIG: ci/image-builder/config.toml
+  VM_PLATFORM: openshift
+  VM_NAMESPACE: golden-images
+  TEMPLATE_NAME: rhel95-nvidia-golden
+  VM_NAME: nvidia-worker-01
+  VM_CPU_CORES: "4"
+  VM_MEMORY: 16Gi
+  VM_DISK_SIZE: 40Gi
+  VM_STORAGE_CLASS: ""
+  GPU_RESOURCE_NAME: ""
+  DISK_PULL_SECRET: containerdisk-pull
+  DEPLOY_VM: "false"
+
+build_nvidia_base:
+  stage: base
+  timeout: 2h
+  resource_group: bootc-podman-storage
+  script:
+    - bash ci/build-base.sh
+  artifacts:
+    reports:
+      dotenv: build/base.env
+    paths: [build/base.env]
+
+build_golden_containerdisk:
+  stage: golden
+  timeout: 3h
+  resource_group: bootc-podman-storage
+  needs:
+    - job: build_nvidia_base
+      artifacts: true
+  script:
+    - bash ci/build-golden.sh
+  artifacts:
+    reports:
+      dotenv: build/golden.env
+    paths: [build/golden.env, build/qcow2.sha256]
+
+deploy_vm_template:
+  stage: deploy
+  timeout: 30m
+  resource_group: bootc-vm-deployment
+  needs:
+    - job: build_golden_containerdisk
+      artifacts: true
+  script:
+    - bash ci/deploy.sh
+  artifacts:
+    paths: [build/*.json]
+    when: on_success

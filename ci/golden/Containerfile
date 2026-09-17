@@ -1,0 +1,10 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+COPY baseline.container /usr/share/containers/systemd/baseline.container
+# Quadlet's generator handles [Install] at boot; do not systemctl enable it here.
+RUN --mount=type=bind,source=rpm-repos,target=/mnt/rpm-repos \
+    if [ -f /mnt/rpm-repos/bootc.repo ]; then \
+      rm -f /etc/yum.repos.d/*.repo && \
+      cp /mnt/rpm-repos/bootc.repo /etc/yum.repos.d/bootc.repo; \
+    fi && \
+    rpm -q cloud-init && bootc container lint

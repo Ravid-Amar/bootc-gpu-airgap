@@ -1,0 +1,4 @@
+# No per-VM users, SSH keys, passwords, or registry credentials in the golden disk.
+# Cloud-init supplies these at first boot. Add supported disk/filesystem settings
+# here for your installed bootc-image-builder version if needed.
+[customizations]

@@ -1,0 +1,21 @@
+[Unit]
+Description=Per-VM workload injected by cloud-init
+Wants=network-online.target
+After=network-online.target cloud-final.service
+@GPU_UNIT@
+
+[Container]
+Image=@WORKLOAD_IMAGE@
+ContainerName=workload
+PodmanArgs=--authfile=/etc/containers/registry-auth.json
+Volume=/etc/workload/config.yaml:/etc/workload/config.yaml:ro,Z
+Pull=missing
+@GPU_CONTAINER@
+
+[Service]
+Restart=always
+RestartSec=10
+TimeoutStartSec=900
+
+[Install]
+WantedBy=multi-user.target

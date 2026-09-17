@@ -1,0 +1,3 @@
+# Replace with your application's actual configuration schema.
+log_level: info
+# The workload image must read /etc/workload/config.yaml, or adjust the Quadlet.

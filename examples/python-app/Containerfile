@@ -1,0 +1,7 @@
+ARG BASE_IMAGE
+FROM ${BASE_IMAGE}
+RUN --mount=type=bind,source=offline/nvidia-offline,target=/tmp/nvidia-offline \
+    NVIDIA_OFFLINE_IMAGE_BUILD=1 bash /tmp/nvidia-offline/install.sh --bootc
+COPY examples/python-app/my_script.py /usr/local/src/myapp/my_script.py
+COPY examples/python-app/myapp.service /etc/systemd/system/myapp.service
+RUN systemctl enable myapp.service && bootc container lint

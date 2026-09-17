@@ -1,0 +1,11 @@
+/build/
+/transfer/
+/archive/
+*.qcow2
+*.tar
+*.tar.gz
+*.auth.json
+__pycache__/
+.pytest_cache/
+.coverage
+.DS_Store
