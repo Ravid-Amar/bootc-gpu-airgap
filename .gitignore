@@ -4,7 +4,14 @@
 *.qcow2
 *.tar
 *.tar.gz
+*.tar.xz
+*.tar.zst
+*.rpm
+*.iso
+*.img
 *.auth.json
+*.pem
+*.key
 __pycache__/
 .pytest_cache/
 .coverage

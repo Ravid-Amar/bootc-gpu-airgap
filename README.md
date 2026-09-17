@@ -1,9 +1,10 @@
-# NVIDIA bootc air-gap
+# bootc GPU air-gap
 
-Build a minimal NVIDIA-enabled RHEL bootc image for disconnected environments.
-The tooling downloads and verifies the NVIDIA driver, NVIDIA Container Toolkit,
-and required RPM dependencies on a connected machine, then packages a
-self-contained bundle for an offline builder.
+`bootc-gpu-airgap` builds a minimal NVIDIA-enabled Red Hat® Enterprise Linux®
+(RHEL) bootc image for disconnected environments. The tooling downloads and
+verifies the NVIDIA driver, NVIDIA Container Toolkit, and required RPM
+dependencies on a connected machine, then packages a self-contained bundle for
+an offline builder.
 
 No sample application or optional RPMs are installed in the base image. Required
 NVIDIA dependencies (including DKMS compilation tools) and packages already in
@@ -51,5 +52,18 @@ installation workflow.
 
 ## Licensing
 
-No license has been granted yet. Add a `LICENSE` file before distributing the
-project as open source.
+The original source code and documentation in this repository are licensed under
+the [Apache License 2.0](LICENSE). That license does not cover Red Hat Enterprise
+Linux, NVIDIA software, downloaded RPMs, container images, or generated transfer
+bundles; those remain subject to their respective terms.
+
+## Trademarks and affiliation
+
+This is an independent project and is not affiliated with, endorsed by, or
+sponsored by Red Hat or NVIDIA.
+
+Red Hat, Red Hat Enterprise Linux, and RHEL are trademarks or registered
+trademarks of Red Hat, Inc. or its subsidiaries in the United States and other
+countries. NVIDIA is a trademark or registered trademark of NVIDIA Corporation
+in the United States and other countries. All other trademarks belong to their
+respective owners.
