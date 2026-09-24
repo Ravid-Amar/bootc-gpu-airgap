@@ -20,6 +20,7 @@ Required environment variables:
 Optional environment variables:
   CONTAINER_ENGINE   podman (default) or docker
   PULL_CUSTOM_BASE   1 to pull CUSTOM_BASE_IMAGE first; 0 (default) for local only
+  ALLOW_OUTPUT_IMAGE_OVERWRITE  1 to allow an existing output tag; 0 (default)
   BUILD_CONTEXT      New absolute temporary path; automatically created if unset
   TMPDIR             Parent for an automatic BUILD_CONTEXT (default: /var/tmp)
 EOF
@@ -42,6 +43,7 @@ custom_image=${CUSTOM_BASE_IMAGE:-}
 output_image=${OUTPUT_IMAGE:-}
 engine=${CONTAINER_ENGINE:-podman}
 pull_custom=${PULL_CUSTOM_BASE:-0}
+allow_output_overwrite=${ALLOW_OUTPUT_IMAGE_OVERWRITE:-0}
 
 [[ $custom_image ]] || die 'Set CUSTOM_BASE_IMAGE to the existing custom base image.'
 [[ $output_image ]] || die 'Set OUTPUT_IMAGE to the new NVIDIA image tag.'
@@ -50,6 +52,7 @@ pull_custom=${PULL_CUSTOM_BASE:-0}
 [[ $output_image =~ ^[[:alnum:]][[:alnum:]._/:-]*$ && $output_image != *@* ]] ||
     die 'OUTPUT_IMAGE must be a tag, not a digest, and contain no shell syntax.'
 [[ $pull_custom =~ ^[01]$ ]] || die 'PULL_CUSTOM_BASE must be 0 or 1.'
+[[ $allow_output_overwrite =~ ^[01]$ ]] || die 'ALLOW_OUTPUT_IMAGE_OVERWRITE must be 0 or 1.'
 
 case $engine in
     podman)
@@ -104,10 +107,18 @@ trap cleanup EXIT
 trap 'exit 130' INT TERM
 
 step 1 'Checking the original transfer files'
-sha256sum --check --strict SHA256SUMS
+if [[ -f offline/base-image.tar ]]; then
+    sha256sum --check --strict SHA256SUMS
+else
+    sed '\|  \./offline/base-image\.tar$|d' SHA256SUMS | sha256sum --check --strict
+fi
 (
     cd offline
-    sha256sum --check --strict TRANSFER.SHA256SUMS
+    if [[ -f base-image.tar ]]; then
+        sha256sum --check --strict TRANSFER.SHA256SUMS
+    else
+        sed '\|  base-image\.tar$|d' TRANSFER.SHA256SUMS | sha256sum --check --strict
+    fi
 )
 
 step 2 'Checking image names and local availability'
@@ -117,7 +128,7 @@ if [[ $pull_custom == 1 ]]; then
 fi
 "$engine" image inspect "$custom_image" >/dev/null 2>&1 ||
     die "Custom base is not in the $engine image store: $custom_image (set PULL_CUSTOM_BASE=1 to pull it)"
-if "$engine" image inspect "$output_image" >/dev/null 2>&1; then
+if [[ $allow_output_overwrite == 0 ]] && "$engine" image inspect "$output_image" >/dev/null 2>&1; then
     die "OUTPUT_IMAGE already exists; choose a new tag: $output_image"
 fi
 echo "Custom base: $custom_image"

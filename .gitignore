@@ -1,6 +1,7 @@
 /build/
 /transfer/
 /archive/
+transfer.zip
 *.qcow2
 *.tar
 *.tar.gz

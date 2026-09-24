@@ -102,8 +102,11 @@ esac
             with tarfile.open(offline / "nvidia-offline.tar.gz", "w:gz") as archive:
                 archive.add(payload, arcname="nvidia-offline")
             archive = offline / "nvidia-offline.tar.gz"
-            (offline / "TRANSFER.SHA256SUMS").write_text(
-                f"{hashlib.sha256(archive.read_bytes()).hexdigest()}  nvidia-offline.tar.gz\n")
+            base_image = offline / "base-image.tar"
+            base_image.write_text("unused custom-build base image\n")
+            (offline / "TRANSFER.SHA256SUMS").write_text("".join(
+                f"{hashlib.sha256(path.read_bytes()).hexdigest()}  {path.name}\n"
+                for path in (archive, base_image)))
             (transfer / "SHA256SUMS").write_text("".join(
                 f"{hashlib.sha256(path.read_bytes()).hexdigest()}  ./{path.relative_to(transfer)}\n"
                 for path in sorted(transfer.rglob("*")) if path.is_file()
@@ -117,7 +120,7 @@ case "$1 $2" in
   "pull localhost/custom:fixed") ;;
   "image inspect")
     image=${@: -1}
-    [[ $image != "$EXPECTED_OUTPUT" || -f $ENGINE_BUILT ]] ;;
+    [[ $image != "$EXPECTED_OUTPUT" || ${OUTPUT_EXISTS:-0} == 1 || -f $ENGINE_BUILT ]] ;;
   "run --rm")
     if [[ $INVENTORY_MODE == additive ]]; then
       printf '%s\\n' base-0:1.0-1.x86_64 added-0:2.0-1.x86_64
@@ -156,10 +159,35 @@ esac
 
             log.unlink()
             built.unlink()
+            base_image.unlink()
+            env.update(OUTPUT_IMAGE="localhost/output:existing",
+                       EXPECTED_OUTPUT="localhost/output:existing",
+                       BUILD_CONTEXT=str(root / "existing context"),
+                       PULL_CUSTOM_BASE="0", ALLOW_OUTPUT_IMAGE_OVERWRITE="0",
+                       OUTPUT_EXISTS="1")
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertNotEqual(result.returncode, 0)
+            self.assertIn("OUTPUT_IMAGE already exists", result.stderr)
+            self.assertFalse(built.exists())
+
+            log.unlink()
+            env.update(OUTPUT_IMAGE="localhost/output:remote",
+                       EXPECTED_OUTPUT="localhost/output:remote",
+                       BUILD_CONTEXT=str(root / "remote context"),
+                       PULL_CUSTOM_BASE="1", ALLOW_OUTPUT_IMAGE_OVERWRITE="1",
+                       OUTPUT_EXISTS="1")
+            result = subprocess.run(command, env=env, capture_output=True, text=True)
+            self.assertEqual(result.returncode, 0, result.stderr)
+            self.assertTrue(built.exists())
+            self.assertIn("image inspect localhost/custom:fixed", log.read_text())
+
+            log.unlink()
+            built.unlink()
             env.update(OUTPUT_IMAGE="localhost/output:changed",
                        EXPECTED_OUTPUT="localhost/output:changed",
                        BUILD_CONTEXT=str(root / "rejected context"),
-                       INVENTORY_MODE="changed", PULL_CUSTOM_BASE="0")
+                       INVENTORY_MODE="changed", ALLOW_OUTPUT_IMAGE_OVERWRITE="0",
+                       OUTPUT_EXISTS="0")
             result = subprocess.run(command, env=env, capture_output=True, text=True)
             self.assertNotEqual(result.returncode, 0)
             self.assertIn("Only additive RPM changes are allowed", result.stderr)

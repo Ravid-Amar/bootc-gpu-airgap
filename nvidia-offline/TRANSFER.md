@@ -6,6 +6,8 @@ never installed by the default build.
 
 To customize the saved RHEL base inside the isolated network before installing
 NVIDIA, follow [CUSTOM_BASE_AIRGAP.md](CUSTOM_BASE_AIRGAP.md).
+That custom-base CI flow may omit `offline/base-image.tar` when it uses a remote
+custom image; `build-custom.sh` still verifies every other checksum entry.
 
 ```text
 transfer/

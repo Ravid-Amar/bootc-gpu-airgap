@@ -162,6 +162,7 @@ Optional variables:
 | --- | --- | --- |
 | `CONTAINER_ENGINE` | `podman` | Use `podman` or `docker`. |
 | `PULL_CUSTOM_BASE` | `0` | Set to `1` to pull `CUSTOM_BASE_IMAGE` before validation and building. |
+| `ALLOW_OUTPUT_IMAGE_OVERWRITE` | `0` | Set to `1` to allow replacing an existing `OUTPUT_IMAGE` tag. |
 | `BUILD_CONTEXT` | Automatically created | A new absolute path for temporary extracted files. It must not already exist. |
 | `TMPDIR` | `/var/tmp` | Parent used for an automatically created `BUILD_CONTEXT`. |
 
@@ -195,6 +196,12 @@ An internet-hosted registry is reachable only if the environment is not actually
 air-gapped. In an isolated network, use an internal registry or load the image
 archive locally and leave `PULL_CUSTOM_BASE=0`.
 
+In CI using a remote `CUSTOM_BASE_IMAGE`, set `PULL_CUSTOM_BASE=1` as shown above.
+For this custom-base flow, `offline/base-image.tar` may be omitted; both checksum
+manifests still verify every other file, and verify the archive too whenever it
+is present. To intentionally replace an existing output tag, set
+`ALLOW_OUTPUT_IMAGE_OVERWRITE=1`; its default is `0`.
+
 To choose the temporary path yourself, pass `BUILD_CONTEXT` through `sudo env`:
 
 ```bash
@@ -217,11 +224,14 @@ it passes these named variables into the root shell that runs the script.
 or validation fails:
 
 1. **Check the transfer.** It verifies `SHA256SUMS` and the inner
-   `offline/TRANSFER.SHA256SUMS` before using any archive or image.
+   `offline/TRANSFER.SHA256SUMS` before using any archive or image. A missing
+   `offline/base-image.tar` is allowed for a remote custom-base build; all other
+   entries remain required and verified.
 2. **Obtain and check the image.** With `PULL_CUSTOM_BASE=1`, it explicitly pulls
    `CUSTOM_BASE_IMAGE` using the selected engine and existing registry login.
    Otherwise it requires the image locally. It then confirms that `OUTPUT_IMAGE`
-   does not exist and that the input and output names differ.
+   does not exist unless `ALLOW_OUTPUT_IMAGE_OVERWRITE=1`, and that the input and
+   output names differ.
 3. **Create and verify `BUILD_CONTEXT`.** It extracts the NVIDIA bundle into a
    unique disposable directory and verifies the bundle's internal checksums.
    If you supplied `BUILD_CONTEXT`, the script refuses an existing, relative, or
