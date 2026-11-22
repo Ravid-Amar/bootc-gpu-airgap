@@ -35,6 +35,56 @@ Registry login alone does not grant RHEL RPM repository access. DKMS also needs
 CodeReady Builder. Open modules require a supported Turing-or-newer GPU.
 The configuration is trusted Bash code; only use files you control.
 
+### NVIDIA Tesla V100 (Volta)
+
+Use [config.v100.example.sh](config.v100.example.sh) for the minimal V100 image.
+It pins NVIDIA `580.105.08`, Container Toolkit `1.20.0-1`, and
+`DRIVER_MODE='proprietary-dkms'` on RHEL 9.5 x86_64. NVIDIA lists V100 in the
+[580.105.08 supported GPUs](https://docs.nvidia.com/datacenter/tesla/tesla-release-notes-580-105-08/index.html).
+Volta requires [proprietary kernel modules](https://docs.nvidia.com/datacenter/tesla/driver-installation-guide/610/kernel-modules.html);
+the default `open-dkms` profile cannot drive a V100. DKMS compiles the proprietary
+modules for the saved base image's exact kernel during the image build; it does
+not require a GPU on the builder.
+
+Start with this profile instead of the default example. If `config.sh` already
+exists, edit its settings rather than overwriting local entitlement choices:
+
+```bash
+cp nvidia-offline/config.v100.example.sh nvidia-offline/config.sh
+# Review BASE_IMAGE, CONTAINER_ENGINE, and DOWNLOAD_IMAGE for your builder.
+bash nvidia-offline/bundle.sh inspect nvidia-offline/config.sh
+bash nvidia-offline/bundle.sh prepare nvidia-offline/config.sh nvidia-offline/dist/v100-r580-01
+bash nvidia-offline/package-transfer.sh nvidia-offline/dist/v100-r580-01 transfer
+```
+
+Use fresh bundle and transfer directories. Transfer the complete `transfer/`
+folder and follow its README. This bundle also works with the
+[custom-base workflow](CUSTOM_BASE_AIRGAP.md); keep `proprietary-dkms` when editing
+its configuration. An existing open-module bundle must be regenerated; changing
+an image tag does not change its driver modules. For the optional VM pipeline,
+use [ci/nvidia-v100-vm.config.sh](../ci/nvidia-v100-vm.config.sh), which also
+requests the required VM packages.
+
+When updating a V100 driver, keep an exact `580.*` version and proprietary
+modules. Application containers must also support Volta (`sm_70`). Use a CUDA
+12.x application stack with Volta support: [CUDA 13 removed offline compilation
+and library support for Volta](https://docs.nvidia.com/cuda/archive/13.0.2/cuda-toolkit-release-notes/).
+The Container Toolkit version is independent of the CUDA application toolkit.
+
+After booting the image on the V100 machine, check:
+
+```bash
+nvidia-smi --query-gpu=name,driver_version --format=csv
+modinfo -F license nvidia
+dkms status
+nvidia-ctk cdi list
+```
+
+Expect the V100 and pinned driver version, `NVIDIA` as the module license, DKMS
+modules installed for the image kernel, and CDI devices. Also run your actual
+CUDA workload in its container. Local tests simulate package selection; GPU
+operation still needs this hardware validation.
+
 ## 2. Prepare and verify
 
 Choose a new output directory for each release:

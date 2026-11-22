@@ -35,6 +35,9 @@ copy to the offline builder. Generated bundles, local configuration, and archive
 releases are intentionally excluded from Git.
 
 Read the [offline preparation guide](nvidia-offline/README.md) before building.
+For **NVIDIA Tesla V100**, use the
+[V100 profile and build instructions](nvidia-offline/README.md#nvidia-tesla-v100-volta):
+proprietary R580 modules with DKMS.
 To add packages or configuration inside the isolated network, follow the
 [custom-base workflow](nvidia-offline/CUSTOM_BASE_AIRGAP.md).
 

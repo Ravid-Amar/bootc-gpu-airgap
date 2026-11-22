@@ -24,6 +24,13 @@ transfer/
 This is a clean RHEL base plus NVIDIA driver, Container Toolkit, and their required
 dependencies. It does not add an application or request extra RPMs. RHEL's existing
 packages and the tools needed to compile the driver remain in the OS.
+
+For Tesla V100, the connected builder must prepare a fresh bundle using the
+V100 profile (`DRIVER_MODE='proprietary-dkms'`, R580). An `open-dkms` bundle cannot
+drive this card. The driver mode and exact version are recorded in
+`offline/nvidia-offline/settings.sh` after extraction by `build.sh`. Use CUDA
+12.x application containers with Volta (`sm_70`) support for V100 workloads.
+
 Allow several GB of free space for extraction and building, in addition to this
 folder. The first build compiles the driver and can take several minutes.
 

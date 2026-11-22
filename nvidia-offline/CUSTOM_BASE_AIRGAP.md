@@ -23,6 +23,10 @@ From the project root, create the local configuration if it does not exist:
 cp nvidia-offline/config.example.sh nvidia-offline/config.sh
 ```
 
+For Tesla V100, copy `nvidia-offline/config.v100.example.sh` instead and retain
+`DRIVER_MODE='proprietary-dkms'` with an exact R580 driver version in the settings
+below. Open kernel modules cannot drive a V100.
+
 Edit `nvidia-offline/config.sh`:
 
 ```bash

@@ -34,6 +34,14 @@ bash nvidia-offline/bundle.sh inspect ci/nvidia-vm.config.sh
 bash nvidia-offline/bundle.sh prepare ci/nvidia-vm.config.sh nvidia-offline/dist/gpu-vm
 ```
 
+For **Tesla V100**, use `ci/nvidia-v100-vm.config.sh` in both commands and a fresh
+output directory such as `nvidia-offline/dist/gpu-v100-vm`. This selects proprietary
+R580 with DKMS and includes the same VM packages. Use this bundle for the runner
+or S3 inputs below. The minimal `nvidia-offline/config.v100.example.sh` profile
+does not request the VM packages. See the [V100 guide](../nvidia-offline/README.md#nvidia-tesla-v100-volta)
+for application compatibility and checks after boot. The VM needs full GPU PCI
+passthrough; this profile does not install NVIDIA vGPU guest drivers.
+
 Use a new output directory. Copy its contents to `/srv/bootc/offline/` on each
 runner that can execute the base build, or upload it to S3 and set `OFFLINE_S3_URI`
 and `S3_ENDPOINT_URL`. Keep the archives and checksum files together.

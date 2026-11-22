@@ -17,6 +17,7 @@ TOOLKIT_VERSION='1.20.0-1'
 # RHEL 9, x86_64 only in this implementation.
 # open-dkms: Turing or newer GPUs; compile for the image kernel during build.
 # proprietary-dkms: use only a driver branch that supports your GPU.
+# For Tesla V100, start with config.v100.example.sh (proprietary R580 + DKMS).
 # precompiled: proprietary NVIDIA RPM for the exact image kernel; no compiler.
 DRIVER_MODE='open-dkms'
 

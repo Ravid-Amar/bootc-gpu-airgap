@@ -76,6 +76,64 @@ class BundleTests(unittest.TestCase):
             KMOD_NEVRA="kmod-nvidia-580.95.05-5.14.0-570.el9.x86_64-3:580.95.05-1.el9.x86_64")
         self.assertEqual(result.returncode, 0, result.stderr)
 
+    def test_profiles_select_driver_stream_and_exact_kernel_build_dependencies(self):
+        profiles = (
+            (ROOT / "config.example.sh", "580-open", "kmod-nvidia-open-dkms", ()),
+            (ROOT / "config.v100.example.sh", "580-dkms", "kmod-nvidia-latest-dkms", ()),
+            (ROOT.parent / "ci/nvidia-vm.config.sh", "580-open", "kmod-nvidia-open-dkms",
+             ("podman", "cloud-init", "qemu-guest-agent")),
+            (ROOT.parent / "ci/nvidia-v100-vm.config.sh", "580-dkms", "kmod-nvidia-latest-dkms",
+             ("podman", "cloud-init", "qemu-guest-agent")),
+        )
+        for profile, stream, kmod, extras in profiles:
+            with self.subTest(profile=profile.name), tempfile.TemporaryDirectory() as directory:
+                tmp = Path(directory)
+                tools = tmp / "tools"
+                bundle = tmp / "bundle"
+                tools.mkdir()
+                bundle.mkdir()
+                shutil.copy(ROOT / "common.sh", tools)
+                shutil.copy(profile, tools / "config.sh")
+                kernel = "5.14.0-503.99.1.el9_5.x86_64"
+                (bundle / "kernel.txt").write_text(kernel + "\n")
+                (bundle / "target-os-release").write_text("VERSION_ID=9.5\n")
+                # Relocate the downloader's container paths; execute its real
+                # package selection but stop at DNF's dependency resolution.
+                script = (ROOT / "download.sh").read_text()
+                script = script.replace("/offline-tools/", f"{tools}/")
+                script = script.replace("/bundle/", f"{bundle}/")
+                downloader = tmp / "download.sh"
+                downloader.write_text(script)
+                dnf = tmp / "dnf"
+                dnf.write_text('''#!/usr/bin/env bash
+set -eu
+printf '%s\\n' "$*" >> "$DNF_LOG"
+if [[ " $* " == *" download --resolve "* ]]; then exit 42; fi
+''')
+                dnf.chmod(0o755)
+                log = tmp / "dnf.log"
+                result = run("bash", str(downloader), env=dict(
+                    os.environ, PATH=f"{tmp}:{os.environ['PATH']}", DNF_LOG=str(log)))
+                self.assertEqual(result.returncode, 42, result.stderr)
+                commands = log.read_text().splitlines()
+                self.assertEqual(commands[0],
+                                 f"--releasever=9.5 -y module enable nvidia-driver:{stream}")
+                packages = (bundle / "requested-packages.txt").read_text().splitlines()
+                self.assertIn(f"{kmod}-580.105.08", packages)
+                self.assertEqual([p for p in packages if p.startswith("kmod-nvidia")],
+                                 [f"{kmod}-580.105.08"])
+                self.assertIn("nvidia-driver-cuda-580.105.08", packages)
+                self.assertIn("nvidia-container-toolkit-1.20.0-1", packages)
+                for package in (f"kernel-devel-{kernel}", f"kernel-devel-matched-{kernel}",
+                                f"kernel-headers-{kernel}", "dkms", "gcc", "make",
+                                "elfutils-libelf-devel", *extras):
+                    self.assertIn(package, packages)
+                if not extras:
+                    self.assertNotIn("cloud-init", packages)
+                self.assertIn("--alldeps", commands[1])
+                for package in packages:
+                    self.assertIn(package, commands[1].split())
+
     def test_empty_config_fails_before_podman(self):
         with tempfile.TemporaryDirectory() as directory:
             config = Path(directory) / "config.sh"
